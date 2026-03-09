@@ -293,19 +293,43 @@ uint32_t EEPROM_Read_word(uint32_t handler, uint16_t offset)
 	return res;
 }
 
-void EEPROM_Write_data(uint32_t handler, uint16_t offset, uint8_t* data, uint16_t size)
+void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte)
 {
+	uint8_t *data = (uint8_t *)data_in;
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
-	ASSERT_DEBUG(offset + size > hsize);
-	ASSERT_DEBUG(hoffset + offset + size > EEPROM_SIZE);
+	ASSERT_DEBUG(offset + size_byte > hsize);
+	ASSERT_DEBUG(hoffset + offset + size_byte > EEPROM_SIZE);
+	offset += hoffset;
 	EEPROM_Unlock();
-	while(size--)
+	while(size_byte)
 	{
 		FLASH->SR = FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGAERR;		// Сброс флагов ошибок перед записью
-		*(volatile uint8_t *)(EEPROM_BASE_ADDR + offset) = *(data++);		// Запись байта
+		if ((offset & 3) || (size_byte < sizeof(uint32_t)))
+		{
+			if (*(volatile uint8_t *)(EEPROM_BASE_ADDR + offset) != *data)
+			{
+				*(volatile uint8_t *)(EEPROM_BASE_ADDR + offset) = *data;		// Запись байта
+			}
+			data++;
+			offset++;
+			size_byte--;
+		}
+		else
+		{
+			uint32_t word;
+			memcpy(&word, data, sizeof(word));
+			if (*(volatile uint32_t *)(EEPROM_BASE_ADDR + offset) != word)
+			{
+				*(volatile uint32_t *)(EEPROM_BASE_ADDR + offset) = word;		// Запись слова
+			}
+			offset+= 4;
+			size_byte-= 4;
+			data += 4;
+		}
 		while (FLASH->SR & FLASH_SR_BSY);									// Ожидание завершения записи
 	}
+
 	EEPROM_Lock();
 }
 
@@ -403,45 +427,6 @@ uint16_t Read_ADC_Channel(uint32_t channel) //  LL_ADC_CHANNEL_X или LL_ADC_C
     // Прочитать результат
     return LL_ADC_REG_ReadConversionData12(ADC1);*/
 }
-
-
-// ===== Disable boot =====
-
-/// @brief Ключи для разблокировки Option Bytes.
-#define OPT_PEKEY1           (0xFBEAD9C8U)
-#define OPT_PEKEY2           (0x24252627U)
-
-/**
- * @brief Настройка Option Bytes для загрузки из Flash (не из System Memory).
- * @note Эта функция в текущей реализации закомментирована, так как
- *       изменение Option Bytes требует специфичных условий и может быть
- *       небезопасно. Рекомендуется использовать внешние утилиты программатора.
- */
-void SetOptionBytes_For_FlashBoot(void)
-{
-	// Функция не работает в текущем виде. Рекомендуется использовать STM32CubeProgrammer.
-	/*
-    if ((FLASH->OPTR & 0xE0000000U) == 0x60000000U) return; // Проверка, если уже установлено
-
-    // Разблокировка EEPROM и Option Bytes
-    FLASH->PEKEYR = 0x89ABCDEFU;
-    FLASH->PEKEYR = 0x02030405U;
-    FLASH->OPTKEYR = OPT_PEKEY1;
-    FLASH->OPTKEYR = OPT_PEKEY2;
-
-    // Новое значение OPTR: nBOOT1=1, nBOOT0=1, nBOOT_SEL=1
-    uint32_t new_optr = (FLASH->OPTR & 0x1FFFFFFFU) | 0x60000000U;
-
-    FLASH->OPTR = new_optr; // Запись нового значения
-    while (FLASH->SR & FLASH_SR_BSY); // Ожидание завершения
-
-    FLASH->PECR |= FLASH_PECR_OBL_LAUNCH; // Запрос сброса для применения изменений
-
-    // Завершение выполнения (ожидается сброс МК)
-    while (1); // Это не обязательно, после OBL_LAUNCH МК должен сброситься */
-}
-
-
 
 /**
  * @brief Запуск сторожевого таймера (IWDG) с максимальным таймаутом.

@@ -69,9 +69,9 @@ enum {
 // begin — сигнатура, чтобы найти в памяти
 // ============================================================================
 extern struct param_mem {
-    uint32_t begin;                // сигнатура RAM-блока
-    int32_t param[PARAM_N];
-    int32_t status[STAT_N];
+    volatile uint32_t begin;                // сигнатура RAM-блока
+    volatile int32_t param[PARAM_N];
+    volatile int32_t status[STAT_N];
 } param_mem;
 
 // ============================================================================

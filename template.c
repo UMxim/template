@@ -55,7 +55,7 @@ void timer_delay_us(uint32_t delay_in)
 void template_init(void)
 {
 	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk; // почему-то не было
-	OB_disable_boot0_pin();// разберись с boot0 на stm32l011 cubeProgrammer
+	//OB_disable_boot0_pin();// разберись с boot0 на stm32l011 cubeProgrammer
 	__enable_irq();
 	params_init();
 

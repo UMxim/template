@@ -65,15 +65,30 @@ static uint32_t eeprom_handler;
 // ============================================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================================
+static uint32_t xor32(uint32_t *data, uint32_t size_word)
+{
+	uint32_t xor = 0;
+	while(size_word--)
+	{
+		xor ^= *data++;
+	}
+	return xor;
+}
+
+
 void params_init(void)
 {
-	eeprom_handler = EEPROM_Get_Handler(sizeof(param_mem));
+	eeprom_handler = EEPROM_Get_Handler(sizeof(param_mem) + 4);
 	EEPROM_Read(eeprom_handler, 0, &param_mem, sizeof(param_mem));
-	if (param_mem.begin != RAM_SIGNATURE)
+	uint32_t xor;
+	EEPROM_Read(eeprom_handler, sizeof(param_mem), &xor, sizeof(xor));
+	xor ^= xor32((uint32_t*)&param_mem, sizeof(param_mem) >> 2);
+
+	if ( (param_mem.begin != RAM_SIGNATURE) || xor )
 	{
 		param_mem.begin = RAM_SIGNATURE | 1;
-		memcpy(param_mem.param, param_s.param_val, sizeof(param_mem.param));
-		memset(param_mem.status, 0, sizeof(param_mem.status));
+		memcpy((void *)param_mem.param, param_s.param_val, sizeof(param_mem.param));
+		memset((void *)param_mem.status, 0, sizeof(param_mem.status));
 	}
 }
 
@@ -82,7 +97,9 @@ void params_cycle(void)
 	if (param_mem.begin == (RAM_SIGNATURE | 1))
 	{
 		param_mem.begin = RAM_SIGNATURE;
-		EEPROM_Write_data(eeprom_handler, 0, (uint8_t*)&param_mem, sizeof(param_mem));
+		EEPROM_Write_data(eeprom_handler, 0, &param_mem, sizeof(param_mem));
+		uint32_t xor = xor32((uint32_t*)&param_mem, sizeof(param_mem) >> 2);
+		EEPROM_Write_data(eeprom_handler, sizeof(param_mem), &xor, sizeof(xor));
 	}
 
 }

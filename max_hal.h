@@ -86,7 +86,7 @@ uint8_t EEPROM_Read_byte(uint32_t handler, uint16_t offset);
 uint16_t EEPROM_Read_halfword(uint32_t handler, uint16_t offset);
 uint32_t EEPROM_Read_word(uint32_t handler, uint16_t offset);
 
-void EEPROM_Write_data(uint32_t handler, uint16_t offset, uint8_t* data, uint16_t size);
+void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
 void EEPROM_WriteByte(uint32_t handler, uint16_t offset, uint8_t data);
 void EEPROM_WriteHalfWord(uint32_t handler, uint16_t offset, uint16_t data);
 void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
