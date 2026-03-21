@@ -28,8 +28,6 @@ void 	timer_delay_us(uint32_t delay); // В пределах 1мс
 
 // ----------------------------------------------------------------- template ---------------------------------------------------------------
 
-void Disable_Boot0_Pin_Final(void);
-
 void template_init(void);
 
 PT_THREAD template_cycle(void);

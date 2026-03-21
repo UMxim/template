@@ -61,7 +61,7 @@ const struct {
 // ============================================================================
 struct param_mem param_mem;
 
-static uint32_t eeprom_handler;
+static uint32_t storage_handler;
 // ============================================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================================
@@ -78,10 +78,10 @@ static uint32_t xor32(uint32_t *data, uint32_t size_word)
 
 void params_init(void)
 {
-	eeprom_handler = EEPROM_Get_Handler(sizeof(param_mem) + 4);
-	EEPROM_Read(eeprom_handler, 0, &param_mem, sizeof(param_mem));
+	storage_handler = Storage_Get_Handler(sizeof(param_mem) + 4);
+	Storage_Read(storage_handler, 0, &param_mem, sizeof(param_mem));
 	uint32_t xor;
-	EEPROM_Read(eeprom_handler, sizeof(param_mem), &xor, sizeof(xor));
+	Storage_Read(storage_handler, sizeof(param_mem), &xor, sizeof(xor));
 	xor ^= xor32((uint32_t*)&param_mem, sizeof(param_mem) >> 2);
 
 	if ( (param_mem.begin != RAM_SIGNATURE) || xor )
@@ -97,9 +97,9 @@ void params_cycle(void)
 	if (param_mem.begin == (RAM_SIGNATURE | 1))
 	{
 		param_mem.begin = RAM_SIGNATURE;
-		EEPROM_Write_data(eeprom_handler, 0, &param_mem, sizeof(param_mem));
+		Storage_Write_data(storage_handler, 0, &param_mem, sizeof(param_mem));
 		uint32_t xor = xor32((uint32_t*)&param_mem, sizeof(param_mem) >> 2);
-		EEPROM_Write_data(eeprom_handler, sizeof(param_mem), &xor, sizeof(xor));
+		Storage_Write_data(storage_handler, sizeof(param_mem), &xor, sizeof(xor));
 	}
 
 }

@@ -42,8 +42,39 @@
 
 void OB_disable_boot0_pin();
 
-#endif
+#define Storage_Get_Handler 	EEPROM_Get_Handler
+#define Storage_Read			EEPROM_Read
+#define Storage_Write_data 		EEPROM_Write_data
+// ===== EEPROM =====
 
+uint32_t EEPROM_Get_Handler(uint16_t size);	// Резервирование памяти и возврат хэндлера
+
+void 	 EEPROM_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size);
+uint8_t  EEPROM_Read_byte(uint32_t handler, uint16_t offset);
+uint16_t EEPROM_Read_halfword(uint32_t handler, uint16_t offset);
+uint32_t EEPROM_Read_word(uint32_t handler, uint16_t offset);
+
+void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
+void EEPROM_WriteByte(uint32_t handler, uint16_t offset, uint8_t data);
+void EEPROM_WriteHalfWord(uint32_t handler, uint16_t offset, uint16_t data);
+void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
+
+
+
+
+#elif defined(STM32F103xB)
+
+#include "stm32f1xx.h"
+
+void CheckMaxFlash();
+
+#define Storage_Get_Handler 	Flash_Get_Handler
+#define Storage_Read			Flash_Read
+#define Storage_Write_data 		Flash_Write_data
+
+#include "stm32f1xx.h"
+
+#endif // stm32XXX
 
 // ===== I2C =====
 
@@ -60,7 +91,7 @@ void OB_disable_boot0_pin();
  * @param[in] size Размер данных для записи в байтах.
  * @return Результат операции (обычно количество переданных байт или код ошибки).
  */
-pt_t maxhal_i2c_write(I2C_TypeDef *I2Cx, uint8_t addr, uint8_t *reg, uint16_t reg_size, uint8_t *buff, uint16_t size);
+pt_t maxhal_i2c_write(I2C_TypeDef *i2c, uint8_t addr, uint8_t *reg, uint16_t reg_size, uint8_t *buff, uint16_t size);
 
 /**
  * @brief Чтение данных из устройства по шине I2C.
@@ -77,19 +108,6 @@ pt_t maxhal_i2c_write(I2C_TypeDef *I2Cx, uint8_t addr, uint8_t *reg, uint16_t re
  */
 int i2c_read(I2C_TypeDef *I2Cx, uint8_t addr, uint8_t *reg, uint16_t reg_size, uint8_t *buff, uint16_t size);
 
-// ===== EEPROM =====
-
-uint32_t EEPROM_Get_Handler(uint16_t size);	// Резервирование памяти и возврат хэндлера
-
-void EEPROM_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size);
-uint8_t EEPROM_Read_byte(uint32_t handler, uint16_t offset);
-uint16_t EEPROM_Read_halfword(uint32_t handler, uint16_t offset);
-uint32_t EEPROM_Read_word(uint32_t handler, uint16_t offset);
-
-void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
-void EEPROM_WriteByte(uint32_t handler, uint16_t offset, uint8_t data);
-void EEPROM_WriteHalfWord(uint32_t handler, uint16_t offset, uint16_t data);
-void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
 
 // ===== ADC =====
 

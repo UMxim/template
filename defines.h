@@ -11,7 +11,7 @@
 #include "stdint.h"
 
 #ifdef DEBUG
-  #define ASSERT_DEBUG(err_stat) if(err_stat) { __BKPT(0); while(1);}
+  #define ASSERT_DEBUG(err_stat) if(err_stat) { while(1);}
 #else
   #define ASSERT_DEBUG(err_stat)
 #endif
@@ -23,6 +23,8 @@ typedef enum
 }errors_e;
 
 typedef uint8_t bool;
+#define false 	(0)
+#define true 	(!false)
 
 #define BIT_GET(reg, bit_num) 				(((reg) >> (bit_num)) & 1U)
 #define BIT_GET_MASK(reg, mask) 			((reg) & (mask))
