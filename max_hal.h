@@ -36,8 +36,6 @@
 
 #include "stm32l0xx.h"
 
-#define EEPROM_BASE_ADDR        0x08080000U
-#define EEPROM_SIZE             512U
 #define ADC_V_REF_mV			1224	// Значение Vref у этого МК
 
 void OB_disable_boot0_pin();
@@ -67,6 +65,10 @@ void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
 #include "stm32f1xx.h"
 
 void CheckMaxFlash();
+
+uint32_t 	Flash_Get_Handler(uint16_t size);
+void 		Flash_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size);
+void 		Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
 
 #define Storage_Get_Handler 	Flash_Get_Handler
 #define Storage_Read			Flash_Read

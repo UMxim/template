@@ -41,14 +41,6 @@ static void Flash_Lock(void)
     FLASH->CR |= FLASH_CR_LOCK;
 }
 
-//__attribute__((section(".RamFunc")))
-__RAM_FUNC void Flash_ErasePage_mem()
-{
-	__disable_irq();
-	FLASH->CR |= FLASH_CR_STRT;// 6. Запуск стирания битом STRT
-	while (FLASH->SR & FLASH_SR_BSY);
-	__enable_irq();
-}
 
 static int Flash_ErasePage(uint32_t page_address)
 {
@@ -188,18 +180,23 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	free(h_ptr);
 }
 
-void CheckMaxFlash()
+void MaxHal_CheckFlash(void *begin_, uint32_t size_b, uint32_t sector_size)
 {
-	extern uint32_t __flash_ext_start;
-	extern uint32_t __flash_ext_size;
-	const uint32_t flash_ext_start	= (uint32_t)&__flash_ext_start;
-	const uint32_t flash_ext_size	= (uint32_t)&__flash_ext_size;
-	const uint32_t sector_size = 1024;
+	uint32_t begin = (uint32_t)begin_;
+	volatile int start = 1;
+	while(start);
 
-	volatile uint8_t run = 0;
-	if(!run) return;
-	int ans;
-	ans = Flash_ErasePage(0x08010000 - 0x400);
+	ASSERT_DEBUG(!(sector_size & (sector_size - 1)));
+	ASSERT_DEBUG(begin & (sector_size - 1));
+	ASSERT_DEBUG(size_b & (sector_size - 1));
+
+	while(size_b)
+	{
+
+	}
+
+
+	ans = Flash_ErasePage(begin);
 	uint32_t *test = malloc(sector_size);
 
 	for (uint32_t sector = flash_ext_start; sector < flash_ext_start + flash_ext_size; sector += sector_size)

@@ -1,56 +1,39 @@
 #include "template.h"
 
 
-volatile uint64_t systime_ms = 0;
+volatile uint64_t systime_ticks = 0;
 
 // ===== timer =====
 
-static inline uint64_t timer_get_time()
+static uint64_t timer_get_ticks()
 {
 	uint64_t time;
+	uint32_t fract;
 	do
 	{
-		time = systime_ms;
-	}while(time != systime_ms);
-	return time;
+		time = systime_ticks;
+		fract = SysTick->LOAD - SysTick->VAL;
+	}while(time != systime_ticks);
+	return time + fract;
 }
 
-inline uint64_t timer_set_timestamp(uint64_t duration)
+uint64_t timer_set_timestamp_ticks(uint64_t duration_ticks)
 {
-	return timer_get_time() + duration;
+	return timer_get_ticks() + duration_ticks;
 }
 
-inline bool timer_is_timer_expired(uint64_t timestamp)
+bool timer_is_timer_expired(uint64_t timestamp)
 {
-	return ( timer_get_time() >= timestamp );
+	return ( timer_get_ticks() >= timestamp );
 }
 
-void 	timer_delay_ms(uint32_t delay)
+void timer_delay_ticks(uint64_t delay_ticks)
 {
-	uint64_t timestamp = timer_set_timestamp(delay);
+	uint64_t timestamp = timer_set_timestamp_ticks(delay_ticks);
 	while(!timer_is_timer_expired(timestamp)) ;
 }
 
-void timer_delay_us(uint32_t delay_in)
-{
-    uint32_t total_ticks = delay_in * TIMER_TICK_PER_US;
-
-    uint32_t passed = 0;
-    uint32_t last = SysTick->VAL;
-    uint32_t current;
-
-    while (passed < total_ticks)
-    {
-        current = SysTick->VAL;
-        passed += (last - current) & 0xFFFFFF;
-        last = current;
-    }
-}
-
 // === ===
-#ifdef STM32L011xx
-
-#endif
 
 void template_init(void)
 {
