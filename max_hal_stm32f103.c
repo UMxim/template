@@ -18,14 +18,9 @@
 #include "max_hal.h"
 #include <string.h>
 #include <stdlib.h>
+#include "template_config.h"
 
 // ===== EEPROM =====
-
-extern uint32_t __flash_param_size ;
-extern uint32_t __flash_param;
-const uint32_t flash_param_size = (uint32_t)&__flash_param_size;
-const uint32_t flash_param		= (uint32_t)&__flash_param;
-
 
 static void Flash_Unlock(void)
 {
@@ -125,7 +120,7 @@ uint32_t Flash_Get_Handler(uint16_t size)
 {
 	static uint16_t offset = 0;
 	size = (size + 3) & (~3U);
-	ASSERT_DEBUG(offset + size > flash_param_size);
+	ASSERT_DEBUG(offset + size > PARAM_FLASH_SIZE);
 	uint32_t res = (offset << 16) | size;
 	offset += size;
 	return res;
@@ -136,9 +131,9 @@ void Flash_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size > hsize);
-	ASSERT_DEBUG(hoffset + offset + size > flash_param_size);
+	ASSERT_DEBUG(hoffset + offset + size > PARAM_FLASH_SIZE);
 	ASSERT_DEBUG(!data);
-	uint8_t *ptr = (uint8_t *)flash_param + hoffset + offset;
+	uint8_t *ptr = (uint8_t *)PARAM_FLASH_BEGIN + hoffset + offset;
 	memcpy(data, ptr, size);
 }
 
@@ -147,7 +142,7 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size_byte > hsize);
-	ASSERT_DEBUG(hoffset + offset + size_byte > flash_param_size);
+	ASSERT_DEBUG(hoffset + offset + size_byte > PARAM_FLASH_SIZE);
 	ASSERT_DEBUG(!data_in);
 	ASSERT_DEBUG(hoffset & 3);
 	ASSERT_DEBUG(hsize & 3);
@@ -155,7 +150,7 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 
 	uint32_t *h_ptr = malloc(hsize);
 	ASSERT_DEBUG(!h_ptr);
-	uint32_t *ptr_flash = (uint32_t*)flash_param + hoffset;
+	uint32_t *ptr_flash = (uint32_t*)PARAM_FLASH_BEGIN + hoffset;
 
 	memcpy(h_ptr, ptr_flash, hsize);
 	memcpy((uint8_t*)h_ptr + offset, data_in, size_byte);
@@ -164,12 +159,12 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	__disable_irq();
 	if (is_need_erase)
 	{
-		uint32_t *sector = malloc(flash_param_size);
+		uint32_t *sector = malloc(PARAM_FLASH_SIZE);
 		ASSERT_DEBUG(!sector);
-		memcpy(sector, (void *)flash_param, flash_param_size);
+		memcpy(sector, (void *)PARAM_FLASH_BEGIN, PARAM_FLASH_SIZE);
 		memcpy(sector + hoffset, h_ptr, hsize);
-		Flash_ErasePage(flash_param);
-		Flash_Write(flash_param,sector, flash_param_size >> 2);
+		Flash_ErasePage(PARAM_FLASH_BEGIN);
+		Flash_Write(PARAM_FLASH_BEGIN, sector, PARAM_FLASH_SIZE >> 2);
 		free(sector);
 	}
 	else
@@ -180,58 +175,31 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	free(h_ptr);
 }
 
-void MaxHal_CheckFlash(void *begin_, uint32_t size_b, uint32_t sector_size)
+void MaxHal_CheckFlash(uint32_t addr, uint32_t sector_size, uint32_t sectors_qty)
 {
-	uint32_t begin = (uint32_t)begin_;
 	volatile int start = 1;
 	while(start);
 
 	ASSERT_DEBUG(!(sector_size & (sector_size - 1)));
-	ASSERT_DEBUG(begin & (sector_size - 1));
-	ASSERT_DEBUG(size_b & (sector_size - 1));
+	ASSERT_DEBUG(addr & (sector_size - 1));
 
-	while(size_b)
+	void *buff = malloc(sector_size);
+	ASSERT_DEBUG(!buff);
+
+	for(int i = 0; i < sectors_qty; i++)
 	{
+		addr += i * sector_size;
+		Flash_ErasePage(addr);
+
+		memset(buff, 0xAA, sector_size);
+		Flash_Write(addr, buff, sector_size / 2);
+
+
 
 	}
 
 
-	ans = Flash_ErasePage(begin);
-	uint32_t *test = malloc(sector_size);
 
-	for (uint32_t sector = flash_ext_start; sector < flash_ext_start + flash_ext_size; sector += sector_size)
-	{
-		memset(test, 0xFF, sector_size);
-		ans = Flash_ErasePage(sector);
-		ASSERT_DEBUG(ans < 0);
-		ans = memcmp(test, (void *)sector, sector_size);
-		ASSERT_DEBUG(ans != 0);
-
-		memset(test, 0xAA, sector_size);
-		ans = Flash_Write(sector, test, sector_size / 4);
-		ASSERT_DEBUG(ans < 0);
-		ans = memcmp(test, (void *)sector, sector_size);
-		ASSERT_DEBUG(ans != 0);
-		ans = Flash_ErasePage(sector);
-		ASSERT_DEBUG(ans < 0);
-
-		memset(test, 0x55, sector_size);
-		ans = Flash_Write(sector, test, sector_size / 4);
-		ASSERT_DEBUG(ans < 0);
-		ans = memcmp(test, (void *)sector, sector_size);
-		ASSERT_DEBUG(ans != 0);
-		ans = Flash_ErasePage(sector);
-		ASSERT_DEBUG(ans < 0);
-
-		memset(test, 0x00, sector_size);
-		ans = Flash_Write(sector, test, sector_size / 4);
-		ASSERT_DEBUG(ans < 0);
-		ans = memcmp(test, (void *)sector, sector_size);
-		ASSERT_DEBUG(ans != 0);
-		ans = Flash_ErasePage(sector);
-		ASSERT_DEBUG(ans < 0);
-
-	}
 }
 
 #endif //#ifdef STM32F103xB

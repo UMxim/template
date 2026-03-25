@@ -65,16 +65,33 @@ static uint32_t storage_handler;
 // ============================================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================================
-static uint32_t xor32(uint32_t *data, uint32_t size_word)
+
+static inline uint32_t Storage_Get_Handler(uint16_t size)
 {
-	uint32_t xor = 0;
-	while(size_word--)
-	{
-		xor ^= *data++;
-	}
-	return xor;
+#ifdef TEMPLATE_PARAM_EEPROM
+	return EEPROM_Get_Handler(size);
+#elif defined(TEMPLATE_PARAM_FLASH)
+	return Flash_Get_Handler(size);
+#endif
 }
 
+static inline void Storage_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size)
+{
+#ifdef TEMPLATE_PARAM_EEPROM
+	return EEPROM_Read(handler, offset, data, size);
+#elif defined(TEMPLATE_PARAM_FLASH)
+	return Flash_Read(handler, offset, data, size);
+#endif
+}
+
+static inline void Storage_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte)
+{
+#ifdef TEMPLATE_PARAM_EEPROM
+	return EEPROM_Write_data(handler, offset, data_in, size_byte);
+#elif defined(TEMPLATE_PARAM_FLASH)
+	return Flash_Write_data(handler, offset, data_in, size_byte);
+#endif
+}
 
 void params_init(void)
 {

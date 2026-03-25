@@ -1,9 +1,8 @@
 #include "template.h"
 
+// ----------------------------------------------------------------- timer -----------------------------------------------------------------
 
 volatile uint64_t systime_ticks = 0;
-
-// ===== timer =====
 
 static uint64_t timer_get_ticks()
 {
@@ -33,7 +32,19 @@ void timer_delay_ticks(uint64_t delay_ticks)
 	while(!timer_is_timer_expired(timestamp)) ;
 }
 
-// === ===
+// ----------------------------------------------------------------- misc -------------------------------------------------------------------
+
+uint32_t xor32(uint32_t *data, uint32_t size_word)
+{
+	uint32_t xor = 0;
+	while(size_word--)
+	{
+		xor ^= *data++;
+	}
+	return xor;
+}
+
+// ----------------------------------------------------------------- template ---------------------------------------------------------------
 
 void template_init(void)
 {

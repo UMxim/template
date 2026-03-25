@@ -40,9 +40,7 @@
 
 void OB_disable_boot0_pin();
 
-#define Storage_Get_Handler 	EEPROM_Get_Handler
-#define Storage_Read			EEPROM_Read
-#define Storage_Write_data 		EEPROM_Write_data
+
 // ===== EEPROM =====
 
 uint32_t EEPROM_Get_Handler(uint16_t size);	// Резервирование памяти и возврат хэндлера
@@ -64,15 +62,12 @@ void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
 
 #include "stm32f1xx.h"
 
-void CheckMaxFlash();
-
+void 		MaxHal_CheckFlash(uint32_t begin_addr, uint32_t sector_size, uint32_t sectors_qty);
 uint32_t 	Flash_Get_Handler(uint16_t size);
 void 		Flash_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size);
 void 		Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
 
-#define Storage_Get_Handler 	Flash_Get_Handler
-#define Storage_Read			Flash_Read
-#define Storage_Write_data 		Flash_Write_data
+
 
 #include "stm32f1xx.h"
 

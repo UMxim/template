@@ -27,7 +27,12 @@ bool timer_is_timer_expired(uint64_t timestamp);
 
 void	 timer_delay_ticks(uint64_t delay_ticks);
 #define  timer_delay_us(us) 							timer_delay_ticks(US_TO_TICKS(us))
-#define  timer_delay_us(ms) 							timer_delay_ticks(1000 * US_TO_TICKS(us))
+#define  timer_delay_ms(ms) 							timer_delay_ticks(1000 * US_TO_TICKS(us))
+
+// ----------------------------------------------------------------- misc -------------------------------------------------------------------
+
+uint32_t xor32(uint32_t *data, uint32_t size_word);
+
 // ----------------------------------------------------------------- template ---------------------------------------------------------------
 
 void template_init(void);
