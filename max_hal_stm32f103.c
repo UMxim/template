@@ -22,7 +22,7 @@
 
 // ===== EEPROM =====
 
-static void Flash_Unlock(void)
+static void _Flash_Unlock(void)
 {
     if (FLASH->CR & FLASH_CR_LOCK)
     {
@@ -31,17 +31,15 @@ static void Flash_Unlock(void)
     }
 }
 
-static void Flash_Lock(void)
+static inline void _Flash_Lock(void)
 {
     FLASH->CR |= FLASH_CR_LOCK;
 }
 
-
-static int Flash_ErasePage(uint32_t page_address)
+static void _Flash_ErasePage(uint32_t page_address)
 {
-
 	__disable_irq();
-	Flash_Unlock();
+	_Flash_Unlock();
 	while (FLASH->SR & FLASH_SR_BSY);
 	FLASH->CR |= FLASH_CR_PER;
 	FLASH->AR = page_address;
@@ -49,65 +47,32 @@ static int Flash_ErasePage(uint32_t page_address)
 	while (FLASH->SR & FLASH_SR_BSY);
 	FLASH->CR &= ~FLASH_CR_PER;
 	FLASH->CR |= FLASH_CR_LOCK;
+	_Flash_Lock();
 	__enable_irq();
-
-
-
-
-	return 1;
-	while (FLASH->SR & FLASH_SR_BSY);
-    Flash_Unlock();// 2. Разблокировка
-    FLASH->SR |= (FLASH_SR_EOP | FLASH_SR_PGERR | FLASH_SR_WRPRTERR);// 3. Очистка флагов статуса (EOP и ошибки) перед началом
-    FLASH->CR |= FLASH_CR_PER;// 4. Установка бита PER (Page Erase)
-    FLASH->AR = page_address;// 5. Запись адреса в AR
-    Flash_ErasePage_mem();
-    FLASH->CR &= ~FLASH_CR_PER;// 8. Сброс бита PER
-    if (FLASH->SR & (FLASH_SR_PGERR | FLASH_SR_WRPRTERR))// 9. Проверка на ошибки после операции
-    {
-
-        FLASH->SR |= (FLASH_SR_PGERR | FLASH_SR_WRPRTERR);// Очищаем флаги ошибок перед выходом
-        Flash_Lock(); // ВАЖНО: Блокируем при ошибке записи/защиты
-        return -4;
-    }
-    FLASH->SR |= FLASH_SR_EOP;// Очистка флага EOP (успех)
-    Flash_Lock();// 10. Блокировка Flash
-    return 0;
 }
-
 
 static int _Flash_Write(uint32_t address, const uint8_t *data, uint32_t size_b)
 {
-    ASSERT_DEBUG(address & 2 != 0);
-    Flash_Unlock();
+    ASSERT_DEBUG((address & 1) != 0);
+    _Flash_Unlock();
 
-    __IO uint16_t* curr_adr;
-    uint16_t hword;
     while(FLASH->SR & FLASH_SR_BSY);
     FLASH->CR |= FLASH_CR_PG;
 
     while(size_b)
     {
-
-    	curr_adr = (__IO uint16_t*)address;
-    	hword = ((size_b >= 2 ? data[1] : 0) << 8) | data[0];
-    	*curr_adr = hword;
+    	uint16_t hword = ((size_b >= 2 ? data[1] : 0) << 8) | data[0];
+    	__disable_irq();
+    	* (__IO uint16_t*)address = hword;
     	while(FLASH->SR & FLASH_SR_BSY);
+    	__enable_irq();
     	address += 2;
     	data += 2;
     	size_b -= 2;
     }
     FLASH->CR &= ~FLASH_CR_PG;// Выключаем режим программирования после завершения цикла
-    Flash_Lock();// Финальная блокировка
+    _Flash_Lock();// Финальная блокировка
     return 0;
-}
-
-static bool Flash_Is_need_erase(uint32_t *flash, uint32_t *data, uint32_t size_word)
-{
-	while(size_word--)
-	{
-		if ((flash[size_word] != data[size_word]) && ((flash[size_word] ^ data[size_word]) & data[size_word])) return true;
-	}
-	return false;
 }
 
 uint32_t Flash_Get_Handler(uint16_t size)
@@ -140,90 +105,76 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	ASSERT_DEBUG(!data_in);
 	ASSERT_DEBUG(hoffset & 3);
 	ASSERT_DEBUG(hsize & 3);
-	hoffset >>= 2;
-
-	uint32_t *h_ptr = malloc(hsize);
-	ASSERT_DEBUG(!h_ptr);
-	uint32_t *ptr_flash = (uint32_t*)PARAM_FLASH_BEGIN + hoffset;
-
-	memcpy(h_ptr, ptr_flash, hsize);
-	memcpy((uint8_t*)h_ptr + offset, data_in, size_byte);
-
-	bool is_need_erase = Flash_Is_need_erase(ptr_flash, h_ptr, hsize >> 2);
-	__disable_irq();
-	if (is_need_erase)
+/// Надо не стирать если fffff
+	uint8_t *ptr_flash = (uint8_t*)PARAM_FLASH_BEGIN + hoffset;
+	if ( memcmp(ptr_flash, data_in, size_byte) != 0)
 	{
-		uint32_t *sector = malloc(PARAM_FLASH_SIZE);
+		uint8_t *sector = malloc(PARAM_FLASH_SIZE);
 		ASSERT_DEBUG(!sector);
 		memcpy(sector, (void *)PARAM_FLASH_BEGIN, PARAM_FLASH_SIZE);
-		memcpy(sector + hoffset, h_ptr, hsize);
-		Flash_ErasePage(PARAM_FLASH_BEGIN);
-		Flash_Write(PARAM_FLASH_BEGIN, sector, PARAM_FLASH_SIZE >> 2);
+		memcpy(sector + hoffset + offset, data_in, size_byte);
+		_Flash_ErasePage(PARAM_FLASH_BEGIN);
+		_Flash_Write(PARAM_FLASH_BEGIN, sector, PARAM_FLASH_SIZE);
 		free(sector);
 	}
-	else
-	{
-		Flash_Write((uint32_t)ptr_flash, h_ptr, hsize >> 2);
-	}
-	__enable_irq();
-	free(h_ptr);
 }
 
 volatile uint32_t cnt = 0;
-void MaxHal_CheckFlash(uint32_t addr, uint32_t sector_size, uint32_t sectors_qty)
+uint32_t MaxHal_CheckFlash(uint32_t addr, uint32_t sector_size, uint32_t sectors_qty)
 {
 	volatile int start = 1;
 	while(start);
-
-
-
+/*
+	uint8_t *buff1 = malloc(sector_size);
+	for (int i = 0; i < sector_size; i++) ((uint8_t *)buff1)[i] = i;
+	_Flash_ErasePage(PARAM_FLASH_BEGIN);
+	_Flash_Write(PARAM_FLASH_BEGIN, buff1, sector_size);
+	uint32_t handler = (4 << 16) | 4;
+	uint32_t abc = 0xDEADBEEF;
+	Flash_Write_data(handler, 0, &abc, 4);
+*/
 	ASSERT_DEBUG(sector_size & (sector_size - 1));
 	ASSERT_DEBUG(addr & (sector_size - 1));
 
-	void *buff = malloc(sector_size);
+	uint8_t *buff = malloc(sector_size);
 	ASSERT_DEBUG(!buff);
 
 	for(int i = 0; i < sectors_qty; i++)
 	{
-		addr += i * sector_size;
-
-		Flash_ErasePage(addr);
+		_Flash_ErasePage(addr);
 		memset(buff, 0xFF, sector_size);
 		int res = memcmp(buff, (void *)addr, sector_size);
 		ASSERT_DEBUG(res);
 
-		Flash_ErasePage(addr);
+		_Flash_ErasePage(addr);
 		memset(buff, 0xAA, sector_size);
 		_Flash_Write(addr, buff, sector_size);
 		res = memcmp(buff, (void *)addr, sector_size);
 		ASSERT_DEBUG(res);
 
-		Flash_ErasePage(addr);
+		_Flash_ErasePage(addr);
 		memset(buff, 0x55, sector_size);
 		_Flash_Write(addr, buff, sector_size);
 		res = memcmp(buff, (void *)addr, sector_size);
 		ASSERT_DEBUG(res);
 
-		Flash_ErasePage(addr);
+		_Flash_ErasePage(addr);
 		memset(buff, 0x00, sector_size);
 		_Flash_Write(addr, buff, sector_size);
 		res = memcmp(buff, (void *)addr, sector_size);
 		ASSERT_DEBUG(res);
 
-		Flash_ErasePage(addr);
+		_Flash_ErasePage(addr);
 		for (int i = 0; i < sector_size; i++) ((uint8_t *)buff)[i] = i;
 		_Flash_Write(addr, buff, sector_size);
 		res = memcmp(buff, (void *)addr, sector_size);
 		ASSERT_DEBUG(res);
 
 		cnt++;
-
-
-
+		addr += sector_size;
 	}
-
-
-
+	free(buff);
+	return cnt;
 }
 
 #endif //#ifdef STM32F103xB

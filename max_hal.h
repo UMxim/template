@@ -62,7 +62,7 @@ void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data);
 
 #include "stm32f1xx.h"
 
-void 		MaxHal_CheckFlash(uint32_t begin_addr, uint32_t sector_size, uint32_t sectors_qty);
+uint32_t 		MaxHal_CheckFlash(uint32_t begin_addr, uint32_t sector_size, uint32_t sectors_qty);
 uint32_t 	Flash_Get_Handler(uint16_t size);
 void 		Flash_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size);
 void 		Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t size_byte);
