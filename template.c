@@ -50,9 +50,9 @@ void template_init(void)
 {
 	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk; // почему-то не было
 	//OB_disable_boot0_pin();// разберись с boot0 на stm32l011 cubeProgrammer
-	MaxHal_CheckFlash(PARAM_FLASH_BEGIN + PARAM_FLASH_SIZE, PARAM_FLASH_SIZE, 64); // Проверка расширенной скрытой флеши
+	//MaxHal_CheckFlash(PARAM_FLASH_BEGIN + PARAM_FLASH_SIZE, PARAM_FLASH_SIZE, 64); // Проверка расширенной скрытой флеши
 	__enable_irq();
-	//params_init();
+	params_init();
 }
 
 PT_THREAD template_cycle(void)

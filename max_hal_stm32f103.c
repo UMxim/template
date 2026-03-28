@@ -25,6 +25,7 @@
 /* 1. Чтение можно по байтам
  * 2. Запись по 2 байта выровнено
  * 3. Записать можно из 0xFFFF -> 0xXXXX  и 0xXXXX -> 0x0000. Другие комбинации не пишутся
+ * 4. Напомню еще раз. Вместо malloc для исключения фрагментации используется стек для сектора = 1024 байта. Не забыть отредактировать в ld
  */
 
 static void _Flash_Unlock(void)
@@ -117,17 +118,16 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	ASSERT_DEBUG(hoffset & 3);
 	ASSERT_DEBUG(hsize & 3);
 
-	uint16_t *ptr_flash = (uint16_t*)PARAM_FLASH_BEGIN + (hoffset >> 1);
+	uint8_t *ptr_flash = (uint8_t*)PARAM_FLASH_BEGIN + hoffset + offset;
 	// Проверяем, надо ли писать вобще
 	if ( !memcmp(ptr_flash, data_in, size_b))
 	{
 		return;
 	}
 	// Не стал колдовать с выравниваниями, проверками границ data и flash. Простой но немного более накладный путь - сразу выделяю сектор и только потом смотрю, надо ли стирать. Всё равно запись гораздо дольше чем вся эта возня
-	uint16_t *sector = malloc(PARAM_FLASH_SIZE);
-	ASSERT_DEBUG(!sector);
+	uint16_t sector[PARAM_FLASH_SIZE >> 1];
 	memcpy(sector, (void *)PARAM_FLASH_BEGIN, PARAM_FLASH_SIZE);
-	memcpy(sector + hoffset + offset, data_in, size_b);
+	memcpy((uint8_t*)sector + hoffset + offset, data_in, size_b);
 	// Теперь в sector то, что должно быть на флеше. Проверяем, надо ли стирать.
 	for (int pos = 0; pos < (PARAM_FLASH_SIZE >> 1); pos++)
 	{
@@ -142,9 +142,24 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 	_Flash_Write(PARAM_FLASH_BEGIN, sector, PARAM_FLASH_SIZE);
 
 	ASSERT_DEBUG(memcmp(sector, (void*)PARAM_FLASH_BEGIN, PARAM_FLASH_SIZE));
-	free(sector);
+}
 
+static void TestFlash()
+{
+	uint32_t handler0 = Flash_Get_Handler(512);
+	uint32_t handler1 = Flash_Get_Handler(512);
 
+	_Flash_ErasePage(PARAM_FLASH_BEGIN);
+	uint32_t data = 0x01234567;
+	Flash_Write_data(handler0, 0, &data, sizeof(data));
+	data = 0xDEADBEAF;
+	Flash_Write_data(handler1, 0, &data, sizeof(data));
+	Flash_Write_data(handler1, 4, &data, sizeof(data));
+	Flash_Write_data(handler1, 4, &data, sizeof(data));// запись того же
+	data = 0x0;
+	Flash_Write_data(handler0, 0, &data, sizeof(data));// запись нулей вместо 01234567
+	data = 0x89ABCDEF;
+	Flash_Write_data(handler0, 0, &data, sizeof(data));// перезапись 0 на 89ABCDEF
 }
 
 volatile uint32_t cnt = 0;
@@ -152,32 +167,11 @@ uint32_t MaxHal_CheckFlash(uint32_t addr, uint32_t sector_size, uint32_t sectors
 {
 	volatile int start = 1;
 	while(start);
-/*
-	uint8_t *buff1 = malloc(sector_size);
-	for (int i = 0; i < sector_size; i++) ((uint8_t *)buff1)[i] = i;
-	_Flash_ErasePage(PARAM_FLASH_BEGIN);
-	_Flash_Write(PARAM_FLASH_BEGIN, buff1, sector_size);
-	uint32_t handler = (4 << 16) | 4;
-	uint32_t abc = 0xDEADBEEF;
-	Flash_Write_data(handler, 0, &abc, 4);
 
+	TestFlash();
 
-	_Flash_ErasePage(addr);
-	uint16_t val = 0xFFFE;
-	_Flash_Write(addr, &val, sizeof(val));
-	val = 0x0000;
-	_Flash_Write(addr + 2, &val, sizeof(val));
-	val = 0xFEFE;
-	_Flash_Write(addr, &val, sizeof(val));
-	val = 0xFFFF;
-	_Flash_Write(addr, &val, sizeof(val));
-
-	return;
-*/
 	ASSERT_DEBUG(sector_size & (sector_size - 1));
 	ASSERT_DEBUG(addr & (sector_size - 1));
-
-
 
 	uint8_t *buff = malloc(sector_size);
 	ASSERT_DEBUG(!buff);
