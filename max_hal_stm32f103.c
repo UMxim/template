@@ -16,6 +16,7 @@
 #ifdef STM32F103xB
 
 #include "max_hal.h"
+#include "template_config.h"
 #include <string.h>
 #include <stdlib.h>
 
