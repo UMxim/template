@@ -98,7 +98,7 @@ uint32_t Flash_Get_Handler(uint16_t size)
 void Flash_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size)
 {
 	uint16_t hoffset = handler >> 16;
-	uint16_t hsize = handler;
+	__attribute__((unused)) uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size > hsize);
 	ASSERT_DEBUG(hoffset + offset + size > PARAM_FLASH_SIZE);
 	ASSERT_DEBUG(!data);
@@ -111,7 +111,7 @@ void Flash_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_t
 {
 
 	uint16_t hoffset = handler >> 16;
-	uint16_t hsize = handler;
+	__attribute__((unused)) uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size_b > hsize);
 	ASSERT_DEBUG(hoffset + offset + size_b > PARAM_FLASH_SIZE);
 	ASSERT_DEBUG(!data_in);
@@ -167,7 +167,6 @@ uint32_t MaxHal_CheckFlash(uint32_t addr, uint32_t sector_size, uint32_t sectors
 {
 	volatile int start = 1;
 	while(start);
-
 	TestFlash();
 
 	ASSERT_DEBUG(sector_size & (sector_size - 1));
