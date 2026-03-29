@@ -18,7 +18,7 @@
 #include "max_hal.h"
 #include <string.h>
 #include <stdlib.h>
-#include "template_config.h"
+
 
 // ===== FLASH =====
 

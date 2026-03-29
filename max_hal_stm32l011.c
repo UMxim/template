@@ -16,6 +16,7 @@
 #ifdef STM32L011xx
 
 #include "max_hal.h"
+#include "template_config.h"
 #include <string.h>
 // ===== I2C =====
 
@@ -231,7 +232,7 @@ uint32_t EEPROM_Get_Handler(uint16_t size)
 {
 	static uint16_t offset = 0;
 	size = (size + 3) & (~3U);
-	ASSERT_DEBUG(offset + size > EEPROM_SIZE);
+	ASSERT_DEBUG(offset + size > PARAM_EEPROM_SIZE);
 	uint32_t res = (offset << 16) | size;
 	offset += size;
 	return res;
@@ -256,9 +257,9 @@ void EEPROM_Read(uint32_t handler, uint16_t offset, void *data, uint16_t size)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size > hsize);
-	ASSERT_DEBUG(hoffset + offset + size > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + size > PARAM_EEPROM_SIZE);
 	ASSERT_DEBUG(!data);
-	uint8_t *ptr = (uint8_t *)(EEPROM_BASE_ADDR + hoffset + offset);
+	uint8_t *ptr = (uint8_t *)(PARAM_EEPROM_BEGIN + hoffset + offset);
 	memcpy(data, ptr, size);
 }
 
@@ -267,8 +268,8 @@ uint8_t EEPROM_Read_byte(uint32_t handler, uint16_t offset)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint8_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint8_t) > EEPROM_SIZE);
-	uint8_t res = *(uint8_t *)(EEPROM_BASE_ADDR + hoffset + offset);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint8_t) > PARAM_EEPROM_SIZE);
+	uint8_t res = *(uint8_t *)(PARAM_EEPROM_BEGIN + hoffset + offset);
 	return res;
 }
 
@@ -277,9 +278,9 @@ uint16_t EEPROM_Read_halfword(uint32_t handler, uint16_t offset)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint16_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint16_t) > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint16_t) > PARAM_EEPROM_SIZE);
 	ASSERT_DEBUG((hoffset + offset) & 1);
-	uint16_t res = *(uint16_t *)(EEPROM_BASE_ADDR + hoffset + offset);
+	uint16_t res = *(uint16_t *)(PARAM_EEPROM_BEGIN + hoffset + offset);
 	return res;
 }
 
@@ -288,9 +289,9 @@ uint32_t EEPROM_Read_word(uint32_t handler, uint16_t offset)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint32_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint32_t) > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint32_t) > PARAM_EEPROM_SIZE);
 	ASSERT_DEBUG((hoffset + offset) & 3);
-	uint32_t res = *(uint32_t *)(EEPROM_BASE_ADDR + hoffset + offset);
+	uint32_t res = *(uint32_t *)(PARAM_EEPROM_BEGIN + hoffset + offset);
 	return res;
 }
 
@@ -300,7 +301,7 @@ void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + size_byte > hsize);
-	ASSERT_DEBUG(hoffset + offset + size_byte > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + size_byte > PARAM_EEPROM_SIZE);
 	offset += hoffset;
 	EEPROM_Unlock();
 	while(size_byte)
@@ -308,9 +309,9 @@ void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_
 		FLASH->SR = FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGAERR;		// Сброс флагов ошибок перед записью
 		if ((offset & 3) || (size_byte < sizeof(uint32_t)))
 		{
-			if (*(volatile uint8_t *)(EEPROM_BASE_ADDR + offset) != *data)
+			if (*(volatile uint8_t *)(PARAM_EEPROM_BEGIN + offset) != *data)
 			{
-				*(volatile uint8_t *)(EEPROM_BASE_ADDR + offset) = *data;		// Запись байта
+				*(volatile uint8_t *)(PARAM_EEPROM_BEGIN + offset) = *data;		// Запись байта
 			}
 			data++;
 			offset++;
@@ -320,9 +321,9 @@ void EEPROM_Write_data(uint32_t handler, uint16_t offset, void* data_in, uint16_
 		{
 			uint32_t word;
 			memcpy(&word, data, sizeof(word));
-			if (*(volatile uint32_t *)(EEPROM_BASE_ADDR + offset) != word)
+			if (*(volatile uint32_t *)(PARAM_EEPROM_BEGIN + offset) != word)
 			{
-				*(volatile uint32_t *)(EEPROM_BASE_ADDR + offset) = word;		// Запись слова
+				*(volatile uint32_t *)(PARAM_EEPROM_BEGIN + offset) = word;		// Запись слова
 			}
 			offset+= 4;
 			size_byte-= 4;
@@ -339,10 +340,10 @@ void EEPROM_WriteByte(uint32_t handler, uint16_t offset, uint8_t data)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint8_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint8_t) > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint8_t) > PARAM_EEPROM_SIZE);
     EEPROM_Unlock();
     FLASH->SR = FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGAERR;			// Сброс флагов ошибок
-    *(volatile uint8_t *)(EEPROM_BASE_ADDR + hoffset + offset) = data;				// Запись байта
+    *(volatile uint8_t *)(PARAM_EEPROM_BEGIN + hoffset + offset) = data;				// Запись байта
     while (FLASH->SR & FLASH_SR_BSY);										// Ожидание завершения записи
     EEPROM_Lock();
 }
@@ -352,11 +353,11 @@ void EEPROM_WriteHalfWord(uint32_t handler, uint16_t offset, uint16_t data)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint16_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint16_t) > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint16_t) > PARAM_EEPROM_SIZE);
 	ASSERT_DEBUG((hoffset + offset) & 1);
     EEPROM_Unlock();
     FLASH->SR = FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGAERR;			// Сброс флагов ошибок
-    *(volatile uint16_t *)(EEPROM_BASE_ADDR + hoffset + offset) = data;				// Запись байта
+    *(volatile uint16_t *)(PARAM_EEPROM_BEGIN + hoffset + offset) = data;				// Запись байта
     while (FLASH->SR & FLASH_SR_BSY);										// Ожидание завершения записи
     EEPROM_Lock();
 }
@@ -366,11 +367,11 @@ void EEPROM_WriteWord(uint32_t handler, uint16_t offset, uint32_t data)
 	uint16_t hoffset = handler >> 16;
 	uint16_t hsize = handler;
 	ASSERT_DEBUG(offset + sizeof(uint32_t) > hsize);
-	ASSERT_DEBUG(hoffset + offset + sizeof(uint32_t) > EEPROM_SIZE);
+	ASSERT_DEBUG(hoffset + offset + sizeof(uint32_t) > PARAM_EEPROM_SIZE);
 	ASSERT_DEBUG((hoffset + offset) & 3);
     EEPROM_Unlock();
     FLASH->SR = FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGAERR;			// Сброс флагов ошибок
-    *(volatile uint32_t *)(EEPROM_BASE_ADDR + hoffset + offset) = data;				// Запись байта
+    *(volatile uint32_t *)(PARAM_EEPROM_BEGIN + hoffset + offset) = data;				// Запись байта
     while (FLASH->SR & FLASH_SR_BSY);										// Ожидание завершения записи
     EEPROM_Lock();
 }
